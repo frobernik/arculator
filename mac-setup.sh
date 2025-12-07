@@ -16,17 +16,12 @@ fi
 if [ "$1" == "use_config" ] || [ "$2" == "use_config" ]
 then
     use_config=1
-else
-    use_config=2
-fi
-
-if [ $use_config -eq 1 ];
-then
     am_ver="1.15"
     lt_ver="2.4.6"
     ac_ver="2.69"
     use_brew_automake="no"
 else
+    use_config=2
     am_ver="1.16"
     lt_ver="2.4.7"
     ac_ver="2.71"
