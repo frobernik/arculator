@@ -15,6 +15,11 @@
 #include "video.h"
 #include "video_sdl2.h"
 
+#ifdef __APPLE__
+#include <stdbool.h>
+static bool macos_mode = true;
+#endif
+
 static int winsizex = 0, winsizey = 0;
 static int win_doresize = 0;
 static int win_dofullscreen = 0;
@@ -53,7 +58,45 @@ static int arc_main_thread(void *p)
 {
 	rpclog("Arculator startup\n");
 
+	if (!video_renderer_init(NULL))
+	{
+		fatal("Video renderer init failed");
+	}
+	input_init();
+
+	if (quited)
+	{
+		rpclog("SHUTTING DOWN\n");
+
+		arc_close();
+
+		input_close();
+
+		video_renderer_close();
+
+		SDL_DestroyWindow(sdl_main_window);
+		SDL_Quit();
+	}
+
+	return 0;
+}
+
+static SDL_Thread *main_thread;
+void arc_start_main_thread(void *wx_window, void *wx_menu)
+{
+	pause_main_thread = 0;
+	main_thread_mutex = SDL_CreateMutex();
+
 	arc_init();
+	
+	rpclog("Attempting to create window\n");
+	sdl_main_window = SDL_CreateWindow(
+		"Arculator",
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		768,
+		576,
+		0);
 
 	if (!video_renderer_init(NULL))
 	{
@@ -84,13 +127,20 @@ static int arc_main_thread(void *p)
 			updateins();
 			last_seconds = tp.tv_sec;
 		}
-		SDL_Event e;
+		SDL_Event e = {0};
 		while (SDL_PollEvent(&e) != 0)
 		{
 			if (e.type == SDL_QUIT)
 			{
-//                                quited = 1;
-				arc_stop_emulation();
+				if (macos_mode)
+				{
+					exit(0);
+				}
+				else
+				{
+					//                                quited = 1;
+					arc_stop_emulation();
+				}
 			}
 			if (e.type == SDL_MOUSEBUTTONUP)
 			{
@@ -185,7 +235,6 @@ static int arc_main_thread(void *p)
 		SDL_LockMutex(main_thread_mutex);
 		if (!pause_main_thread)
 			arc_run();
-		SDL_UnlockMutex(main_thread_mutex);
 
 		// Sleep to make it up to 10 ms of real time
 		static Uint32 last_timer_ticks = 0;
@@ -215,26 +264,6 @@ static int arc_main_thread(void *p)
 			updatemips=0;
 		}
 	}
-	rpclog("SHUTTING DOWN\n");
-
-	arc_close();
-
-	input_close();
-
-	video_renderer_close();
-
-	SDL_DestroyWindow(sdl_main_window);
-
-	return 0;
-}
-
-static SDL_Thread *main_thread;
-void arc_start_main_thread(void *wx_window, void *wx_menu)
-{
-	quited = 0;
-	pause_main_thread = 0;
-	main_thread_mutex = SDL_CreateMutex();
-	main_thread = SDL_CreateThread(arc_main_thread, "Main Thread", (void *)NULL);
 }
 
 void arc_stop_main_thread()

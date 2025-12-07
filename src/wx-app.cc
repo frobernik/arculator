@@ -36,6 +36,11 @@ extern "C"
 	#include "video.h"
 }
 
+#ifdef __APPLE__
+static bool s_macAutoWindowMenu = true;
+static WXHMENU s_macWindowMenuHandle;
+#endif
+
 extern void InitXmlResource();
 
 wxDEFINE_EVENT(WX_STOP_EMULATION_EVENT, wxCommandEvent);
@@ -61,7 +66,9 @@ bool App::OnInit()
 	wxImage::AddHandler( new wxPNGHandler );
 	wxXmlResource::Get()->InitAllHandlers();
 	InitXmlResource();
-
+#ifdef __APPLE__
+	wxApp::SetExitOnFrameDelete(true);
+#endif
 	if (rom_establish_availability())
 	{
 		wxMessageBox("No ROMs available\nArculator needs at least one ROM set present to run", "Arculator", wxOK | wxCENTRE | wxSTAY_ON_TOP);
@@ -88,6 +95,22 @@ Frame::Frame(App* app, const wxString& title, const wxPoint& pos,
 		wxFrame(NULL, wxID_ANY, title, pos, size, 0)
 {
 	main_frame = this;
+
+	if (s_macAutoWindowMenu)
+	{
+		this->menu = wxXmlResource::Get()->LoadMenu("main_menu");
+		if (menu)
+		{
+			wxMenuBar *menubar = new wxMenuBar();
+			menubar->Append(menu, "&File");
+			SetMenuBar(menubar);
+		}
+	}
+	else
+	{
+		this->menu = wxXmlResource::Get()->LoadMenu(wxT("main_menu"));
+		main_menu = this->menu;
+	}
 
 	this->menu = wxXmlResource::Get()->LoadMenu(wxT("main_menu"));
 	main_menu = this->menu;
@@ -264,6 +287,7 @@ void Frame::OnMenuCommand(wxCommandEvent &event)
 		arc_send_close();
 #else
 		arc_stop_emulation();
+		exit(0);
 #endif
 	}
 	else if (event.GetId() == XRCID("IDM_FILE_RESET"))
@@ -541,6 +565,11 @@ void Frame::OnMenuCommand(wxCommandEvent &event)
 		item->Check(true);
 
 		arc_set_dblscan(1);
+	}
+	else if (event.GetId() == XRCID("wxID_EXIT"))
+	{
+		arc_stop_emulation();
+		exit(0);
 	}
 	else if (event.GetId() == XRCID("IDM_BLACK_ACORN"))
 	{

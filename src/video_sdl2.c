@@ -113,18 +113,7 @@ int video_renderer_init(void *main_window)
 	}
 
 	rpclog("create SDL window\n");
-	if (main_window == NULL)
-	{
-		sdl_main_window = SDL_CreateWindow(
-			"Arculator",
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
-			768,
-			576,
-			0
-		);
-	}
-	else
+	if (main_window != NULL)
 	{
 		sdl_main_window = SDL_CreateWindowFrom(main_window);
 	}
