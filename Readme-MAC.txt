@@ -1,4 +1,4 @@
-Arculator v2.2 Linux supplement
+Arculator v2.2 Mac supplement
 
 
 You will need the following software :
